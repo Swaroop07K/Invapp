@@ -1,0 +1,49 @@
+
+-- 1. Create Users Table
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(10) CHECK (role IN ('admin', 'employee')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. Create Inventory Table
+CREATE TABLE inventory (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    category VARCHAR(50),
+    current_quantity INT DEFAULT 0,
+    min_required_quantity INT DEFAULT 10,
+    price DECIMAL(10,2),
+    sales_history JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. Insert Test Users
+-- Admin: admin / admin123
+-- Employee: employee1 / emp123
+INSERT INTO users (username, password, role) VALUES 
+('admin', 'admin123', 'admin'),
+('employee1', 'emp123', 'employee');
+
+-- 4. Insert Sample Inventory Items
+INSERT INTO inventory (name, category, current_quantity, min_required_quantity, price, sales_history) VALUES 
+('Compute Engine X1', 'Infrastructure', 45, 20, 129.99, '[{"date": "2024-05-01", "quantity": 5}, {"date": "2024-05-02", "quantity": 8}]'),
+('S3 Standard Storage', 'Storage', 8, 15, 349.50, '[{"date": "2024-05-01", "quantity": 12}, {"date": "2024-05-02", "quantity": 15}]'),
+('CloudFront Edge Node', 'Networking', 120, 50, 89.00, '[{"date": "2024-05-01", "quantity": 2}, {"date": "2024-05-02", "quantity": 3}]');
+
+-- 5. Helper Function for updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_inventory_updated_at
+BEFORE UPDATE ON inventory
+FOR EACH ROW
+EXECUTE PROCEDURE update_updated_at_column();
